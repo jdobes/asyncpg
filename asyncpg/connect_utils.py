@@ -222,6 +222,7 @@ def _parse_hostlist(hostlist, port, *, unquote=False):
 
 def _parse_connect_dsn_and_args(*, dsn, host, port, user,
                                 password, passfile, database, ssl,
+                                sslcert, sslkey, sslrootcert,
                                 connect_timeout, server_settings):
     # `auth_hosts` is the version of host information for the purposes
     # of reading the pgpass file.
@@ -309,6 +310,21 @@ def _parse_connect_dsn_and_args(*, dsn, host, port, user,
                 val = query.pop('sslmode')
                 if ssl is None:
                     ssl = val
+
+            if 'sslcert' in query:
+                val = query.pop('sslcert')
+                if sslcert is None:
+                    sslcert = val
+
+            if 'sslkey' in query:
+                val = query.pop('sslkey')
+                if sslkey is None:
+                    sslkey = val
+
+            if 'sslrootcert' in query:
+                val = query.pop('sslrootcert')
+                if sslrootcert is None:
+                    sslrootcert = val
 
             if query:
                 if server_settings is None:
@@ -427,7 +443,7 @@ def _parse_connect_dsn_and_args(*, dsn, host, port, user,
                 '`sslmode` parameter must be one of: {}'.format(modes))
 
         # docs at https://www.postgresql.org/docs/10/static/libpq-connect.html
-        # Not implemented: sslcert & sslkey & sslrootcert & sslcrl params.
+        # Not implemented: sslcrl param.
         if sslmode < SSLMode.allow:
             ssl = False
         else:
@@ -441,6 +457,21 @@ def _parse_connect_dsn_and_args(*, dsn, host, port, user,
         sslmode = SSLMode.verify_full
     else:
         sslmode = SSLMode.disable
+
+    if sslcert is None:
+        sslcert = os.getenv('PGSSLCERT')
+
+    if sslkey is None:
+        sslkey = os.getenv('PGSSLKEY')
+
+    if sslrootcert is None:
+        sslrootcert = os.getenv('PGSSLROOTCERT')
+
+    if isinstance(ssl, ssl_module.SSLContext):
+        if sslcert:
+            ssl.load_cert_chain(sslcert, keyfile=sslkey)
+        if sslrootcert:
+            ssl.load_verify_locations(cafile=sslrootcert)
 
     if server_settings is not None and (
             not isinstance(server_settings, dict) or
@@ -463,7 +494,8 @@ def _parse_connect_arguments(*, dsn, host, port, user, password, passfile,
                              statement_cache_size,
                              max_cached_statement_lifetime,
                              max_cacheable_statement_size,
-                             ssl, server_settings):
+                             ssl, sslcert, sslkey, sslrootcert,
+                             server_settings):
 
     local_vars = locals()
     for var_name in {'max_cacheable_statement_size',
@@ -491,6 +523,7 @@ def _parse_connect_arguments(*, dsn, host, port, user, password, passfile,
     addrs, params = _parse_connect_dsn_and_args(
         dsn=dsn, host=host, port=port, user=user,
         password=password, passfile=passfile, ssl=ssl,
+        sslcert=sslcert, sslkey=sslkey, sslrootcert=sslrootcert,
         database=database, connect_timeout=timeout,
         server_settings=server_settings)
 
