@@ -452,26 +452,27 @@ def _parse_connect_dsn_and_args(*, dsn, host, port, user,
             ssl.verify_mode = ssl_module.CERT_REQUIRED
             if sslmode <= SSLMode.require:
                 ssl.verify_mode = ssl_module.CERT_NONE
+        
+            if sslcert is None:
+                sslcert = os.getenv('PGSSLCERT')
+
+            if sslkey is None:
+                sslkey = os.getenv('PGSSLKEY')
+
+            if sslrootcert is None:
+                sslrootcert = os.getenv('PGSSLROOTCERT')
+
+            if sslcert:
+                ssl.load_cert_chain(sslcert, keyfile=sslkey)
+
+            if sslrootcert:
+                ssl.load_verify_locations(cafile=sslrootcert)
+
     elif ssl is True:
         ssl = ssl_module.create_default_context()
         sslmode = SSLMode.verify_full
     else:
         sslmode = SSLMode.disable
-
-    if sslcert is None:
-        sslcert = os.getenv('PGSSLCERT')
-
-    if sslkey is None:
-        sslkey = os.getenv('PGSSLKEY')
-
-    if sslrootcert is None:
-        sslrootcert = os.getenv('PGSSLROOTCERT')
-
-    if isinstance(ssl, ssl_module.SSLContext):
-        if sslcert:
-            ssl.load_cert_chain(sslcert, keyfile=sslkey)
-        if sslrootcert:
-            ssl.load_verify_locations(cafile=sslrootcert)
 
     if server_settings is not None and (
             not isinstance(server_settings, dict) or
