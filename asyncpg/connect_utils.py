@@ -222,7 +222,7 @@ def _parse_hostlist(hostlist, port, *, unquote=False):
 
 def _parse_connect_dsn_and_args(*, dsn, host, port, user,
                                 password, passfile, database, ssl,
-                                connect_timeout, server_settings):
+                                sslrootcert, connect_timeout, server_settings):
     # `auth_hosts` is the version of host information for the purposes
     # of reading the pgpass file.
     auth_hosts = None
@@ -431,13 +431,25 @@ def _parse_connect_dsn_and_args(*, dsn, host, port, user,
         if sslmode < SSLMode.allow:
             ssl = False
         else:
-            ssl = ssl_module.create_default_context()
+            if sslrootcert:
+                try:
+                    ssl = ssl_module.create_default_context(cafile=sslrootcert)
+                except FileNotFoundError:
+                    ssl = ssl_module.create_default_context()
+            else:
+                ssl = ssl_module.create_default_context()
             ssl.check_hostname = sslmode >= SSLMode.verify_full
             ssl.verify_mode = ssl_module.CERT_REQUIRED
             if sslmode <= SSLMode.require:
                 ssl.verify_mode = ssl_module.CERT_NONE
     elif ssl is True:
-        ssl = ssl_module.create_default_context()
+        if sslrootcert:
+            try:
+                ssl = ssl_module.create_default_context(cafile=sslrootcert)
+            except FileNotFoundError:
+                ssl = ssl_module.create_default_context()
+        else:
+            ssl = ssl_module.create_default_context()
         sslmode = SSLMode.verify_full
     else:
         sslmode = SSLMode.disable
@@ -463,7 +475,7 @@ def _parse_connect_arguments(*, dsn, host, port, user, password, passfile,
                              statement_cache_size,
                              max_cached_statement_lifetime,
                              max_cacheable_statement_size,
-                             ssl, server_settings):
+                             ssl, sslrootcert, server_settings):
 
     local_vars = locals()
     for var_name in {'max_cacheable_statement_size',
@@ -491,8 +503,8 @@ def _parse_connect_arguments(*, dsn, host, port, user, password, passfile,
     addrs, params = _parse_connect_dsn_and_args(
         dsn=dsn, host=host, port=port, user=user,
         password=password, passfile=passfile, ssl=ssl,
-        database=database, connect_timeout=timeout,
-        server_settings=server_settings)
+        sslrootcert=sslrootcert, database=database,
+        connect_timeout=timeout, server_settings=server_settings)
 
     config = _ClientConfiguration(
         command_timeout=command_timeout,
