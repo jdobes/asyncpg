@@ -1758,6 +1758,7 @@ async def connect(dsn=None, *,
                   sslcert=None,
                   sslkey=None,
                   sslrootcert=None,
+                  sslcrl=None,
                   connection_class=Connection,
                   record_class=protocol.Record,
                   server_settings=None):
@@ -1912,6 +1913,10 @@ async def connect(dsn=None, *,
         This parameter specifies the name of a file containing SSL certificate
         authority (CA) certificate(s).
 
+    :param sslcrl
+        This parameter specifies the file name of the SSL certificate
+        revocation list (CRL).
+
     :param dict server_settings:
         An optional dict of server runtime parameters.  Refer to
         PostgreSQL documentation for
@@ -2007,6 +2012,7 @@ async def connect(dsn=None, *,
         sslcert=sslcert,
         sslkey=sslkey,
         sslrootcert=sslrootcert,
+        sslcrl=sslcrl,
         database=database,
         server_settings=server_settings,
         command_timeout=command_timeout,
